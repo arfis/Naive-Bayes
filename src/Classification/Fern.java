@@ -1,4 +1,4 @@
-package test;
+package Classification;
 
 import org.opencv.core.MatOfKeyPoint;
 
@@ -16,7 +16,10 @@ public class Fern {
 			histogram[i]=0;
 		}
 	}
-
+	public void setName(String name)
+	{
+		this.name = name;
+	}
 	public int getHist_size() {
 		return hist_size;
 	}
@@ -43,17 +46,10 @@ public class Fern {
 	}
 	public void showHistogram()
 	{
+		
 		for(int i=0;i<size;i++)
 		{
-			System.out.print(i + "  ");
-		}
-		System.out.println("");
-		for(int i=0;i<size;i++)
-		{
-			if(i<10)
-			System.out.print(histogram[i]+"  ");
-			else
-			System.out.print(histogram[i]+"   ");
+			System.out.println(i + " : " + histogram[i]);
 		}
 	}
 	/*

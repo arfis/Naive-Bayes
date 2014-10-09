@@ -1,4 +1,4 @@
-package test;
+package Classification;
 
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;

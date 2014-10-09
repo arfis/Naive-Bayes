@@ -1,10 +1,15 @@
-package test;
+package imageTransformation;
 
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfKeyPoint;
 import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
+
+import Classification.Camera;
+import Classification.Classifier;
+import Classification.Fern;
+import Classification.Keypoint;
 
 public class LoadTrainingSet {
 	Mat[] trainingData;
@@ -15,7 +20,7 @@ public class LoadTrainingSet {
 	Classifier clas;
 	Camera cam;
 	//the maximum number received from the keypoint
-	Fern fern = new Fern(200);
+	Fern fern[] = new Fern[200];
 	
 	public LoadTrainingSet(Camera c,Keypoint k,Classifier clas)
 	{
@@ -42,13 +47,15 @@ public class LoadTrainingSet {
 	{
 		for(int i=0;i<number;i++)
 		{
+			System.out.println("identifikacia keypointov");
+			fern[i] = new Fern(200);
 			System.out.println("Keypointy na vzorke");
 			if (trainingData[i].empty()) break;
 			keypoint.init_camera(cam);
 			keyPoints[i] = keypoint.Extract(trainingData[i]);
-			fern.train(keyPoints[i]);
-			fern.name = "Chobotnica";
-			fern.showHistogram();
+			fern[i].train(keyPoints[i]);
+			fern[i].setName("Chobotnica");
+			fern[i].showHistogram();
 		}
 		
 	}
