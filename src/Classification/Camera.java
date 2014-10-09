@@ -59,13 +59,13 @@ public class Camera {
         	try {
 				while (System.in.available() == 0) {
 				Mat frame = new Mat();	
-				
+				Thread.sleep(20000);
 				camera.read(frame);
 				//transformation of the input image to grayscale
 				Imgproc.cvtColor(frame, frame,Imgproc.COLOR_RGB2GRAY);
 				fern = new Fern(200);
 				fern.train(img_k.Extract(frame));
-				fern.showHistogram();
+				fern.getPercentage();
 				Thread.sleep(2000);
 				}
 			} catch (Exception e) {

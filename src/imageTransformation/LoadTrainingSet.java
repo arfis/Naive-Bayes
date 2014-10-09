@@ -35,9 +35,12 @@ public class LoadTrainingSet {
 		  
 				for(int i=1;i<=number;i++)
 				{
+					Creator c = new Creator();
 					System.out.println("loading traning set");
 					 trainingData[i-1] = Highgui.imread("C:\\Users\\Michal\\workspace\\Recognition\\TrainSet\\"+i+".jpg",Highgui.CV_LOAD_IMAGE_COLOR);
 					 Imgproc.cvtColor(trainingData[i-1], trainingData[i-1], Imgproc.COLOR_RGB2GRAY );
+					 
+					 trainingData[i-1] = c.Rotate(trainingData[i-1]);
 				}
 				System.out.println("identifying keypoints");
 				IdentifyKeypoints();
@@ -55,7 +58,8 @@ public class LoadTrainingSet {
 			keyPoints[i] = keypoint.Extract(trainingData[i]);
 			fern[i].train(keyPoints[i]);
 			fern[i].setName("Chobotnica");
-			fern[i].showHistogram();
+			//fern[i].showHistogram();
+			fern[i].getPercentage();
 		}
 		
 	}

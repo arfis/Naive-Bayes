@@ -7,6 +7,8 @@ public class Fern {
 	int [] histogram;
 	int size;
 	int hist_size = 0;
+	int max = 0;
+	
 	
 	public Fern(int size){
 		this.size = size;
@@ -16,6 +18,12 @@ public class Fern {
 			histogram[i]=0;
 		}
 	}
+	public void getPercentage()
+	{
+	System.out.println("pravdepodobnost:" + (float)majority()/(float)max + " bodu " + majority());	
+	System.out.println("pocet dvojic: " + max);
+	}
+	
 	public void setName(String name)
 	{
 		this.name = name;
@@ -28,6 +36,7 @@ public class Fern {
 	{
 		if(histogram[index]==0) hist_size++;
 		histogram[index]++;
+		max++;
 	}
 	
 	public int majority()
