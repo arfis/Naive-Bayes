@@ -4,3 +4,5 @@ ipch/*
 OpenCVProject/Debug/*
 Debug/*
 /Debug/*
+OpenCVProject/Debug/
+/OpenCVProject/Debug/
