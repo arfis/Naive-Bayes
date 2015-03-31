@@ -1,3 +1,6 @@
 *.class
 ipch/*
 /OpenCVProject/Debug/*
+OpenCVProject/Debug/*
+Debug/*
+/Debug/*
