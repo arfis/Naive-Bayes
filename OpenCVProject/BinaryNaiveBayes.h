@@ -8,19 +8,18 @@
 #include "opencv2/highgui/highgui_c.h"
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/highgui/highgui.hpp"
-#include "Fern.h"
+#include <bitset>
 
 using namespace cv;
-class Classificator
+
+class BinaryNaiveBayes
 {
 public:
-	Classificator(void);
-	~Classificator(void);
-	void train(Mat trainingData,Mat trainingClasses,int number);
-	vector<int> identify(Fern *f,int mode);	
-	vector<int> compute(Fern *trained);
-	void add(Mat descriptors,int trainingClass);
-
-	int predict(Mat data);
+	BinaryNaiveBayes(void);
+	vector<vector<int>> findMatch(Mat* picture,int *recognizedPoint);
+	void trainBayes(Mat *picture,int number);
+	~BinaryNaiveBayes(void);
+	void init(int size);
 };
+
 

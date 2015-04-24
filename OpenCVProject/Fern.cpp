@@ -14,93 +14,101 @@
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/highgui/highgui.hpp"
 #include <bitset>
+#include <iostream> // library that contain basic input/output functions
+#include <fstream> 
 
 //TO DO: -add to the histogram a new column which tells that from which picture it is
 //-adding all keypoints to one big two dimensional array
 using namespace std;
 
-
-//Ksize is the number of keypoints - number of rows in the histogram
-//fernSize when used as 2^fernSize, number of columns - fern size number of bites it takes from the binary descriptor string
-
+#define PI 3.14159265
+char* TRAIN_FILE = "training_semiNaive";
+int FERN_SIZE = 8;
+int DES_MODE = 4;
 int no;
 //int Ksize;
 long binary_to_decimal(string num);
-vector<int> normalize(vector<int> vect,int cols);
-
+//vector<int> normalize(vector<int> vect,int cols);
+void showPicture(Mat picture,char *name);
+void writeToFile();
 vector< vector <int> > *dataHistogram = new vector<vector<int>>();
 vector<int> *trainedHistogram = new vector<int>();
-cv::String name;
-void calculateAverage();
+void ShowKeyPoints1(Mat picture,vector<KeyPoint> *keypointsA);
+void addToTrainingSet(Mat descriptors,int numberClass);
+vector <KeyPoint> rotateKeyPoints1(vector<KeyPoint> keypoints,int angle,Point center);
+
+vector<vector<vector<int>>> histogram;
+vector<char> wasSet;
+vector<KeyPoint> *processedKeyPoints;
+vector<int> randomNumbers(vector<int>(40));
+int classes;
+int wasCreated = 0;
 int test = 0;
 int numberOfClasses;
-
-void setTest(int i)
-{
-	test = 3;
-}
-
-int getTest()
-{
-	return test;
-}
+cv::String name;
 
 Fern::Fern()
 {
 }
 
-void Fern::printVariance()
-{
-	printf("printing variance");
-	for(int i =0; i<16; i++)
-	{
-		cout << variance[i];
-		cout << "\n";
-	}
-}
 
-void Fern::showAverage()
-{
-	int i;
-	for(i=0;i<16;i++)
-	{
-		cout << average[i];
-		cout << "\n";
-	}
-}
+void Fern::loadFromFile(){
+	string line;
+	int type = 1;
+	int readingClass = -1;
+	int readingDescriptor = -1;
+	int parsedNumber;
+	int classOrDes;
+	string delimiter = ";";
+	string token;
 
-float* Fern::getAverage()
-{
-	return average;
-}
+  ifstream myfile (TRAIN_FILE);
+  if (myfile.is_open())
+  {
+    while ( getline (myfile,line) )
+    {
+		int unknownNumb = stoi(line);
 
-float* Fern::getVar()
-{
-	return variance;
-}
+		if(line.find_first_of(";") == -1){
+			if(readingClass == -1){
+				type++;
+				readingClass = unknownNumb;
+			}
+			//nacitanie jednotlivych deskriptorov - cisla deskriptorov vzdy nacitane cislo musi byt vacsie ako aktualne cislo des
+			else if(readingDescriptor < unknownNumb){
+				readingDescriptor = unknownNumb;
+				histogram[readingClass].push_back( std::vector<int>() );
+				histogram[readingClass][readingDescriptor] = vector<int>(40*pow(2,FERN_SIZE));
+			}
+			else{
+				readingDescriptor = -1;
+				readingClass = unknownNumb;
+			}
 
-void Fern::calculateVariance()
-{
-float var;
-calculateAverage();
-//sum of every column
-for(int i=0;i<fernSize;i++)
-{
-	var = 0;
-	for(int j = 0; j<Ksize; j++)
-	{
-		var += (average[i] - dataHistogram[j][i])*(average[i] - dataHistogram[j][i]);
-	}
+		}
+		else{
+		
+		size_t pos = 0;
+		int hist_position = 0;
 
-	var /= Ksize-1;
-	variance[i] = pow(var,2);
-}
-}
+		while ((pos = line.find(delimiter)) != std::string::npos) {
+			token = line.substr(0, pos);
+			line.erase(0, pos + delimiter.length());
+			if(token.size()>0)
+				histogram[readingClass][readingDescriptor][hist_position] = stoi(token);
+			hist_position++;
+			}
+		}
+    }
+    myfile.close();
+  }
 
+  else cout << "Unable to open file"; 
+}
 void Fern::loadUnknown(Mat data){
 	String des;
 	String fewBites;
-	std::vector<int> histogram(pow(2,8));
+	std::vector<int> histogram(pow(2,FERN_SIZE));
 
 	Mat result;
 	long decimal;
@@ -113,69 +121,343 @@ void Fern::loadUnknown(Mat data){
 			std::bitset<8> bs (number);
 			des = bs.to_string();
 
-			for(int binaryIndex=0;binaryIndex<8;binaryIndex++){
-				fewBites = des.substr(binaryIndex,8);
+			for(int binaryIndex=0;binaryIndex<FERN_SIZE;binaryIndex++){
+				fewBites = des.substr(binaryIndex,FERN_SIZE);
 				decimal = binary_to_decimal(fewBites);
-				binaryIndex = binaryIndex + 7;
+				binaryIndex = binaryIndex + FERN_SIZE-1;
 				histogram[(int)decimal]++;
 			}
 	  }
 	}
 	
-	trainedHistogram = normalize(histogram,(int)pow(2,8));
+	//trainedHistogram = normalize(histogram,(int)pow(2,8));
 	printf("end creating unknown ferns");
 	
 }
 
-vector<vector<int>> normalize(vector<vector<int>> vect,int rows,int cols){
-	for(int i=0;i<rows;i++){
-		for(int j=0;j<cols;j++){
-			vect[i][j] %= 256;
+vector<KeyPoint> *getKeypoints(Mat picture){
+
+	std::vector<cv::KeyPoint> *keypointsA = new vector<KeyPoint>;
+	cv::Ptr<cv::FeatureDetector> detector;
+
+	detector = cv::Algorithm::create<cv::FeatureDetector>("Feature2D.BRISK");
+	detector->detect(picture, *keypointsA);
+	return keypointsA;
+}
+
+Mat *getDescriptors(Mat picture,vector<KeyPoint> *keyPoints){
+		Mat *descriptors = new Mat;
+		cv::Ptr<cv::DescriptorExtractor> descriptorExtractor;
+
+			switch(DES_MODE){
+		case 1:{
+			descriptorExtractor =cv::Algorithm::create<cv::DescriptorExtractor>("Feature2D.BRIEF");
+			break;
+		   }
+
+		case 2:{
+			descriptorExtractor =cv::Algorithm::create<cv::DescriptorExtractor>("Feature2D.BRISK");
+
+			break;
+		   }
+
+		case 3:{
+			descriptorExtractor =cv::Algorithm::create<cv::DescriptorExtractor>("Feature2D.ORB");
+			break;
+		   }
+
+		case 4:{
+			descriptorExtractor =cv::Algorithm::create<cv::DescriptorExtractor>("Feature2D.FREAK");
+			break;
+		   }
 		}
+		//TODO: Q:preco sa meni pocet keypointov v tejto metode?
+		descriptorExtractor->compute(picture, *processedKeyPoints, *descriptors);
+		return descriptors;
+}
+
+void rotate(Mat *picture,int number){
+	vector<KeyPoint> *keypoints = getKeypoints(*picture);
+	vector<KeyPoint> *newKeypoints = new vector<KeyPoint>;
+	double angle = -1.0;
+	double scale = 1;
+	Mat new_picture;
+	Mat help;
+	Mat mKeypoints;
+	Mat rotated_keypoints;
+
+	String original = "original";
+	String warped = "warped";
+	
+	Point center = Point( picture->size().width/2,picture->size().height/2);
+	Mat rot_mat = getRotationMatrix2D( center, angle, scale );
+	processedKeyPoints = getKeypoints(*picture);
+	Mat descriptors = *getDescriptors(*picture, processedKeyPoints);
+
+	addToTrainingSet(descriptors,number);
+	//ShowKeyPoints1(*picture,processedKeyPoints);
+	
+	for(int i=0;i<40;i++){
+		angle = rand() % 360;
+		rot_mat = getRotationMatrix2D( center, angle, scale );
+		warpAffine( *picture, new_picture, rot_mat, picture->size());
+	
+		*newKeypoints = rotateKeyPoints1(*processedKeyPoints,angle,center);
+		addToTrainingSet(*getDescriptors(new_picture, newKeypoints),number);
 	}
-	return vect;	
+	printf("konec");
 }
 
-vector<int> normalize(vector<int> vect,int cols){
-		for(int j=0;j<cols;j++){
-			vect[j] %= 255;
+void writeToFile(){
+	ofstream fout(TRAIN_FILE);
+	if(fout.is_open())
+	{
+    //file opened successfully so we are here
+    cout << "File Opened successfully!!!. Writing data from array to file" << endl;
+
+	int i=0;
+	int j=0;
+	int f=0;
+	int size = pow(2,FERN_SIZE);
+	for(int i=0;i<histogram.size();i++){
+		fout << i << endl;
+		for(int deskriptor=0;deskriptor<histogram[i].size();deskriptor++){
+			fout << deskriptor << endl;
+			for(int fern = 0;fern<histogram[i][deskriptor].size();fern++){
+				 fout << histogram[i][deskriptor][fern]; //writing ith character of array in the file
+				 fout << ";";
+			}
+			fout << endl;
 		}
-	return vect;	
+	}	
+    cout << "Array data successfully saved into the file test.txt" << endl;
+	}
+	else //file could not be opened
+	{
+		cout << "File could not be opened." << endl;
+	}
+	
 }
+void matchTwoImages(Mat descriptors_1,Mat descriptors_2){
+	
+}
+Fern::Fern(int numberOfClasses){
+	histogram = vector<vector<vector<int>>> (numberOfClasses);
+	wasSet = vector<char>(numberOfClasses);
+	classes = numberOfClasses;
+	//nadstavenie ze ziadna clasa nemala vytvoreny druhy rozmer
+	for(int i =0;i<numberOfClasses;i++){
+		wasSet.push_back(0);
+	}
+	 }
+void addToTrainingSet(Mat descriptors,int classNumber){
 
-Fern::Fern(Mat data,Mat classes,int classesInt)
-{
-	//vytovrenie histogramu pre vsetky triedy
-	//vector<vector<int>> *histogram(classesInt, vector<int>(pow(2,8));
-	String des;
-	String fewBites;
-	std::vector<std::vector<int>> histogram(
-    classesInt,
-    std::vector<int>(pow(2,8)));
+	descriptors.convertTo(descriptors, CV_32FC1);
+	//treba v konstruktore inicializovat trojrozmerne pole podla poctu nacitanych tried obrazkov
+	//vector<vector<vector<int>>> histogram(numberClass,vector<vector<int>>(descriptors.rows,vector <int>(40*pow(2,8))));
 	Mat result;
 	long decimal;
+	int binSum = pow(2,9);
+	String des;
+	String fewBites;
+	int randomChosingNumber;
+	int size = pow(2,FERN_SIZE);
 
-	numberOfClasses = classesInt;
-
-	for(int i =0;i<data.rows;i++){
-		for(int j=0;j<data.cols;j++){
-
-			float number = data.at<float>(i,j);
+	//inicializacia 40 nahodnych cisel - pozicia fernov
+	if(wasCreated == 0){
+		wasCreated = 1;
+		for(int binaryIndex=0;binaryIndex<40;binaryIndex++){
 			
-			std::bitset<8> bs (number);
-			des = bs.to_string();
+			randomChosingNumber = rand() % binSum;
+			randomNumbers[binaryIndex] = randomChosingNumber;
 
-			for(int binaryIndex=0;binaryIndex<8;binaryIndex++){
-				fewBites = des.substr(binaryIndex,8);
-				decimal = binary_to_decimal(fewBites);
-				binaryIndex = binaryIndex + 7;
-				histogram[classes.at<int>(i)][(int)decimal]++;
+			if(randomNumbers[binaryIndex] + FERN_SIZE > binSum ){
+				randomNumbers[binaryIndex] -= FERN_SIZE;
 			}
-	  }
+
+			else if(randomNumbers[binaryIndex] - FERN_SIZE < 0){
+				randomNumbers[binaryIndex] += FERN_SIZE;
+			}
+		}
+		printf("********random pole vytvorene********\n");
 	}
-	//histogram = normalize(histogram,classesInt, pow(2,8));
-	dataHistogram = histogram;
-	printf("end");
+
+	//ak uz boli vytvorene pre danu classu riadky pre deskriptory tak pre zrotovane body sa pouziva uz vytvorene
+	if(wasSet[classNumber] == 0){
+		wasSet[classNumber] = 1;
+		for(int point =0;point<descriptors.rows+1;point++){
+			histogram[classNumber].push_back( std::vector<int>() );
+			histogram[classNumber][point] = vector<int>(40*pow(2,FERN_SIZE));
+		}
+	}
+
+	//***************Trenovanie do histogramu*********************//
+	for(int point =0;point<descriptors.rows;point++){
+		des = "";
+		//vytvorenie binarneho retazca z deskriptoru
+		for(int j=0;j<descriptors.cols;j++){
+
+			float number = descriptors.at<float>(point,j);
+			std::bitset<8> bs (number);
+			des += bs.to_string();
+	  }
+		//pouzitie 40tich nahodnych fernov pri budovani histogramu - 
+		//hodnota kazdeho fernu je posunuta o max velkost fernu
+		
+		for(int fernIndex=0; fernIndex<40; fernIndex++){						
+				fewBites = des.substr(randomNumbers[fernIndex],FERN_SIZE);
+				decimal = binary_to_decimal(fewBites);
+				int position = decimal+(size*fernIndex);
+				histogram[classNumber][point][position]++;
+			}
+	}
+}
+void ShowKeyPoints1(Mat picture,vector<KeyPoint> *keypointsA){
+	Mat outpt;
+	cv::drawKeypoints(picture, *keypointsA, outpt, Scalar::all(10), DrawMatchesFlags::DEFAULT);
+	showPicture(outpt,"keypointy");
+}
+vector<vector<int>> Fern::recognize(Mat picture,int *rec_point,int write){
+	
+	if(write == 0)
+		writeToFile();
+
+	processedKeyPoints = getKeypoints(picture);
+	Mat descriptors = *getDescriptors(picture, processedKeyPoints);
+
+	descriptors.convertTo(descriptors, CV_32FC1);
+	vector<int> mapper(descriptors.rows);
+	vector<vector<int>> resultVect(descriptors.rows, vector<int>(2));
+	vector<int> recClassesVect;
+	vector<int> keyPointsMatched;
+	//inicializacia pola 
+	for(int i=0; i<classes; i++){
+		recClassesVect.push_back(0);
+	}
+
+	Mat result;
+	long decimal;
+	String des;
+	String fewBites;
+	int recClass=-1;
+	int recDes=-1;
+	int fernIndex;
+	int max = 0;
+	int sumForDes = 0;
+	int position;
+
+	printf("zacina rozpoznavanie");
+	//prechadzanie kazdeho keypointu - deskriptoru z rozpoznavaneho objektu
+	for(int point =0;point<descriptors.rows;point++){
+		//inicializacia maxima, sumy a binarneho stringu, taktiez pre istotu sa nadstavit rozpoznana trieda a deskriptor na hodnotu -1
+		des			= "";
+		sumForDes	= 0;
+		max			= 0;
+		recDes		=-1;
+		recClass	=-1;
+
+		//*********************Vytvorenie binarneho retazca**************************//
+		//vytvorenie binarneho retazca z deskriptoru
+		for(int j=0;j<descriptors.cols;j++){
+
+			float number = descriptors.at<float>(point,j);
+			std::bitset<8> bs (number);
+			des += bs.to_string();
+		}
+		//*********************Koniec tvorby binarneho retazca**************************//
+
+		
+		//*********************Samotne rozpoznavanie neznameho keypointu**********************//
+		//cyklus na prejdenie prveho rozmeru histogramu - pocet natrenovanych tried
+		for(int i=0;i<classes;i++){
+
+			//cyklus na prechadzanie jednotlivych keypointov v natrenovanom histograme
+			for(int j=0;j<histogram[i].size();j++){
+
+				//pre kazdy keypoint(deskriptor) sa vynuluje hodnota sumy
+				sumForDes = 0;
+
+				//vyber fernov zo vstupneho retazca neznameho obrazka
+				for(fernIndex=0;fernIndex<40;fernIndex++){
+							
+				fewBites	= des.substr(randomNumbers[fernIndex],FERN_SIZE);
+				decimal		= binary_to_decimal(fewBites);
+				position	= decimal+(pow(2,FERN_SIZE)*fernIndex);
+
+				sumForDes	+= histogram[i][j][position];
+				}
+
+				if(sumForDes>=max){
+						max			= sumForDes;
+						recClass	= i;
+						recDes		= j;
+						resultVect[point][0] = recClass;
+						resultVect[point][1] = recDes;
+					}
+			}
+
+		}
+		//*********************Koniec rozpoznavania neznameho keypointu**********************//
+		//po konci cyklusu sa najde keypoint na ktory sa neznamy keypoint namapuje
+		mapper[point]	= recClass;
+		recClassesVect[recClass]++;
+	}
+
+	max = 0;
+	int finalPoint = 0;
+	for(int i=0;i<recClassesVect.size();i++){
+
+		if(recClassesVect[i]>max){
+			max			= recClassesVect[i];
+			finalPoint	= i;
+		}
+	}
+	*rec_point = finalPoint;
+	return resultVect;
+}
+
+void showPicture(Mat picture,char *name){
+	namedWindow(name);
+	imshow(name,picture);
+}
+void Fern::train(Mat *picture,int number){
+
+	rotate(picture,number);
+}
+vector <KeyPoint> rotateKeyPoints1(vector<KeyPoint> keypoints,int angle,Point center){
+	//RotatedRect myRect;
+	std::vector<cv::Point2f> points;
+	Point2f onePoint;
+	vector<KeyPoint>::iterator it;
+	vector<KeyPoint> fKeyPoints;
+	float newX,newY;
+	float test,test2;
+	angle = -angle;
+	RotatedRect rect;
+
+	cout << angle;
+
+	for( it= keypoints.begin(); it!= keypoints.end();it++)
+	{
+		
+		float tempX = it->pt.x - center.x;
+		float tempY = it->pt.y - center.y;
+
+		newX = tempX*cos(angle*PI/180.0)-tempY*sin(angle*PI/180.0);
+		newY = tempX*sin(angle*PI/180.0)+tempY*cos(angle*PI/180.0);
+
+		newX = newX + center.x;
+		newY = newY + center.y;
+		onePoint = Point2f(newX,newY);
+		//newKeypoints.push_back(cv::KeyPoint(onePoint, 1.f));
+		points.push_back(onePoint);
+	}
+
+	//konverzia z point2f na keypointy
+	for( size_t i = 0; i < points.size(); i++ ) {
+		fKeyPoints.push_back(cv::KeyPoint(points[i], 1.f));
+	}
+	return fKeyPoints;
 }
 
 long binary_to_decimal(string num) /* Function to convert binary to dec */
@@ -200,72 +482,4 @@ long binary_to_decimal(string num) /* Function to convert binary to dec */
 
 Fern::~Fern(void)
 {
-}
-
-String Fern::getName()
-{
-return name;
-}
-
-void Fern::create(cv::String binary)
-{
-int index;
-int number;
-no++;
-//creating fern from received binary string -taking just 3 bite, the max value they can have is 16
-for(index=-1;index<(int)binary.size()-1;)
-{
-	//for(int i =0;i<fernSize;i++){
-	number = 0;
-	number += binary[++index]-'0';
-	number += (binary[++index]-'0')*2;
-	number += (binary[++index]-'0')*4;
-	number += (binary[++index]-'0')*8;
-	
-	//adding the computed number to the histogram
-	dataHistogram[no][number]++;
-	//if(histogram[no][number] > 100) printf("vysokaaa hodnota!");
-}
-}
-
-void Fern::calculateAverage()
-{
-	for(int i =0;i<fernSize;i++)
-	{
-	//creating average
-		for(int j = 0;j<Ksize;j++)
-		{
-			average[i] += dataHistogram[j][i];
-		}
-	average[i] /= Ksize;
-	}
-}
-
-void Fern::showHistogram()
-{
-	int index1,index2;
-	for(index1=0;index1<Ksize;index1++)
-	{
-		for(index2=0;index2<dataHistogram.at(index1).size();index2++)
-		{
-			cout << dataHistogram.at(index1).at(index2);
-			cout << " ";
-		}
-		cout << "\n";
-	}
-}
-
-vector< vector <int> > Fern::getHistogram()
-{
-	return dataHistogram;
-}
-
-int Fern::getSize1()
-{
-	return Ksize;
-}
-
-int Fern::getSize2()
-{
-	return fernSize;
 }
