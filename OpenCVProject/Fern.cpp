@@ -22,7 +22,10 @@
 using namespace std;
 
 #define PI 3.14159265
-char* TRAIN_FILE = "training_semiNaive";
+char* TRAIN_FILE = "training_semiNaive.txt";
+char* RANDOM_FILE = "random_numbers.txt";
+int const ROTATION_COUNT = 30;
+int const FERN_COUNT = 40;
 int FERN_SIZE = 8;
 int DES_MODE = 4;
 int no;
@@ -30,7 +33,7 @@ int no;
 long binary_to_decimal(string num);
 //vector<int> normalize(vector<int> vect,int cols);
 void showPicture(Mat picture,char *name);
-void writeToFile();
+void writeToFile(int mode);
 vector< vector <int> > *dataHistogram = new vector<vector<int>>();
 vector<int> *trainedHistogram = new vector<int>();
 void ShowKeyPoints1(Mat picture,vector<KeyPoint> *keypointsA);
@@ -78,7 +81,7 @@ void Fern::loadFromFile(){
 			else if(readingDescriptor < unknownNumb){
 				readingDescriptor = unknownNumb;
 				histogram[readingClass].push_back( std::vector<int>() );
-				histogram[readingClass][readingDescriptor] = vector<int>(40*pow(2,FERN_SIZE));
+				histogram[readingClass][readingDescriptor] = vector<int>(FERN_COUNT*pow(2,FERN_SIZE));
 			}
 			else{
 				readingDescriptor = -1;
@@ -129,10 +132,7 @@ void Fern::loadUnknown(Mat data){
 			}
 	  }
 	}
-	
 	//trainedHistogram = normalize(histogram,(int)pow(2,8));
-	printf("end creating unknown ferns");
-	
 }
 
 vector<KeyPoint> *getKeypoints(Mat picture){
@@ -157,7 +157,6 @@ Mat *getDescriptors(Mat picture,vector<KeyPoint> *keyPoints){
 
 		case 2:{
 			descriptorExtractor =cv::Algorithm::create<cv::DescriptorExtractor>("Feature2D.BRISK");
-
 			break;
 		   }
 
@@ -172,7 +171,7 @@ Mat *getDescriptors(Mat picture,vector<KeyPoint> *keyPoints){
 		   }
 		}
 		//TODO: Q:preco sa meni pocet keypointov v tejto metode?
-		descriptorExtractor->compute(picture, *processedKeyPoints, *descriptors);
+		descriptorExtractor->compute(picture, *keyPoints, *descriptors);
 		return descriptors;
 }
 
@@ -197,7 +196,7 @@ void rotate(Mat *picture,int number){
 	addToTrainingSet(descriptors,number);
 	//ShowKeyPoints1(*picture,processedKeyPoints);
 	
-	for(int i=0;i<40;i++){
+	for(int i=0;i<ROTATION_COUNT;i++){
 		angle = rand() % 360;
 		rot_mat = getRotationMatrix2D( center, angle, scale );
 		warpAffine( *picture, new_picture, rot_mat, picture->size());
@@ -208,35 +207,52 @@ void rotate(Mat *picture,int number){
 	printf("konec");
 }
 
-void writeToFile(){
-	ofstream fout(TRAIN_FILE);
-	if(fout.is_open())
-	{
-    //file opened successfully so we are here
-    cout << "File Opened successfully!!!. Writing data from array to file" << endl;
-
-	int i=0;
-	int j=0;
-	int f=0;
-	int size = pow(2,FERN_SIZE);
-	for(int i=0;i<histogram.size();i++){
-		fout << i << endl;
-		for(int deskriptor=0;deskriptor<histogram[i].size();deskriptor++){
-			fout << deskriptor << endl;
-			for(int fern = 0;fern<histogram[i][deskriptor].size();fern++){
-				 fout << histogram[i][deskriptor][fern]; //writing ith character of array in the file
-				 fout << ";";
-			}
-			fout << endl;
+void writeToFile(int mode){
+	if(mode == 1){
+		ofstream fout(TRAIN_FILE);
+		if(fout.is_open())
+		{
+			//file opened successfully so we are here
+			cout << "File Opened successfully!!!. Writing data from array to file" << endl;
+			int i=0;
+			int j=0;
+			int f=0;
+			int size = pow(2,FERN_SIZE);
+			for(int i=0;i<histogram.size();i++){
+				fout << i << endl;
+				for(int deskriptor=0;deskriptor<histogram[i].size();deskriptor++){
+					fout << deskriptor << endl;
+					for(int fern = 0;fern<histogram[i][deskriptor].size();fern++){
+						 fout << histogram[i][deskriptor][fern]; //writing ith character of array in the file
+						 fout << ";";
+					}
+					fout << endl;
+				}
+			}	
+			cout << "Array data successfully saved into the file" << endl;
 		}
-	}	
-    cout << "Array data successfully saved into the file test.txt" << endl;
+		else //file could not be opened
+		{
+			cout << "File could not be opened." << endl;
+		}
 	}
-	else //file could not be opened
-	{
-		cout << "File could not be opened." << endl;
+	//ulozenie nahodnych cisel do suboru
+	if(mode == 2){
+		ofstream fout(RANDOM_FILE);
+		
+		if(fout.is_open())
+		{
+			//file opened successfully so we are here
+					for(int number = 0;number<randomNumbers.size();number++){
+						 fout << randomNumbers[number] << endl;//writing ith character of array in the file
+					}
+			cout << "Array data successfully saved into the file" << endl;		
+		}	
+		else //file could not be opened
+		{
+			cout << "File could not be opened." << endl;
+		}
 	}
-	
 }
 void matchTwoImages(Mat descriptors_1,Mat descriptors_2){
 	
@@ -250,6 +266,49 @@ Fern::Fern(int numberOfClasses){
 		wasSet.push_back(0);
 	}
 	 }
+
+void initRandomArray(){
+	string line;
+
+	int randomChosingNumber;
+	int index	= 0;
+	int binSum	= pow(2,9);
+	
+  ifstream myfile (RANDOM_FILE);
+
+	if (myfile.is_open())
+	{	
+		while ( getline (myfile,line) )
+		{
+			int number = stoi(line);
+			randomNumbers[index] = number;
+			index++;
+		}
+		myfile.close();
+		cout << "nahodne cisla boli uspesne nacitane zo suboru";
+	}
+	
+	if(index == 0){
+
+		for(int binaryIndex=0;binaryIndex<40;binaryIndex++){
+			
+				randomChosingNumber = rand() % binSum;
+				randomNumbers[binaryIndex] = randomChosingNumber;
+
+				if(randomNumbers[binaryIndex] + FERN_SIZE > binSum ){
+					randomNumbers[binaryIndex] -= FERN_SIZE;
+				}
+
+				else if(randomNumbers[binaryIndex] - FERN_SIZE < 0){
+					randomNumbers[binaryIndex] += FERN_SIZE;
+				}
+		}
+		writeToFile(2);
+		myfile.close();
+		cout<< "nahodne cisla boli uspesne zapisane do suboru";
+	}
+}
+
 void addToTrainingSet(Mat descriptors,int classNumber){
 
 	descriptors.convertTo(descriptors, CV_32FC1);
@@ -257,29 +316,15 @@ void addToTrainingSet(Mat descriptors,int classNumber){
 	//vector<vector<vector<int>>> histogram(numberClass,vector<vector<int>>(descriptors.rows,vector <int>(40*pow(2,8))));
 	Mat result;
 	long decimal;
-	int binSum = pow(2,9);
 	String des;
 	String fewBites;
-	int randomChosingNumber;
+
 	int size = pow(2,FERN_SIZE);
 
 	//inicializacia 40 nahodnych cisel - pozicia fernov
 	if(wasCreated == 0){
 		wasCreated = 1;
-		for(int binaryIndex=0;binaryIndex<40;binaryIndex++){
-			
-			randomChosingNumber = rand() % binSum;
-			randomNumbers[binaryIndex] = randomChosingNumber;
-
-			if(randomNumbers[binaryIndex] + FERN_SIZE > binSum ){
-				randomNumbers[binaryIndex] -= FERN_SIZE;
-			}
-
-			else if(randomNumbers[binaryIndex] - FERN_SIZE < 0){
-				randomNumbers[binaryIndex] += FERN_SIZE;
-			}
-		}
-		printf("********random pole vytvorene********\n");
+		initRandomArray();
 	}
 
 	//ak uz boli vytvorene pre danu classu riadky pre deskriptory tak pre zrotovane body sa pouziva uz vytvorene
@@ -317,21 +362,21 @@ void ShowKeyPoints1(Mat picture,vector<KeyPoint> *keypointsA){
 	cv::drawKeypoints(picture, *keypointsA, outpt, Scalar::all(10), DrawMatchesFlags::DEFAULT);
 	showPicture(outpt,"keypointy");
 }
-vector<vector<int>> Fern::recognize(Mat picture,int *rec_point,int write){
+vector<vector<float>> Fern::recognize(Mat picture,int *rec_point,int write){
 	
-	if(write == 0)
-		writeToFile();
+	if(write == 1)
+		writeToFile(1);
 
-	processedKeyPoints = getKeypoints(picture);
-	Mat descriptors = *getDescriptors(picture, processedKeyPoints);
+	vector<KeyPoint> *processedKeyPoints	= getKeypoints(picture);
+	Mat descriptors							= *getDescriptors(picture, processedKeyPoints);
 
 	descriptors.convertTo(descriptors, CV_32FC1);
 	vector<int> mapper(descriptors.rows);
-	vector<vector<int>> resultVect(descriptors.rows, vector<int>(2));
+	vector<vector<float>> resultVect(descriptors.rows, vector<float>(3));
 	vector<int> recClassesVect;
 	vector<int> keyPointsMatched;
 	//inicializacia pola 
-	for(int i=0; i<classes; i++){
+	for(int i=0; i<classes+1; i++){
 		recClassesVect.push_back(0);
 	}
 
@@ -339,11 +384,11 @@ vector<vector<int>> Fern::recognize(Mat picture,int *rec_point,int write){
 	long decimal;
 	String des;
 	String fewBites;
-	int recClass=-1;
-	int recDes=-1;
 	int fernIndex;
-	int max = 0;
-	int sumForDes = 0;
+	int recClass	=-1;
+	int recDes		=-1;
+	int max			= 0;
+	int sumForDes	= 0;
 	int position;
 
 	printf("zacina rozpoznavanie");
@@ -387,12 +432,22 @@ vector<vector<int>> Fern::recognize(Mat picture,int *rec_point,int write){
 				sumForDes	+= histogram[i][j][position];
 				}
 
-				if(sumForDes>=max){
+				if(sumForDes>max ){
+					float fitness = (float)sumForDes/float(40*ROTATION_COUNT);
+					if(fitness > 0.010){
 						max			= sumForDes;
 						recClass	= i;
 						recDes		= j;
 						resultVect[point][0] = recClass;
 						resultVect[point][1] = recDes;
+						resultVect[point][2] = fitness;
+					}
+					else{
+						recClass	= classes+1;
+						recDes		= 0;
+						resultVect[point][0] = classes+1;
+						resultVect[point][1] = 0;
+					}
 					}
 			}
 
@@ -407,7 +462,7 @@ vector<vector<int>> Fern::recognize(Mat picture,int *rec_point,int write){
 	int finalPoint = 0;
 	for(int i=0;i<recClassesVect.size();i++){
 
-		if(recClassesVect[i]>max){
+		if(recClassesVect[i]>=max && recClassesVect[i]!=999){
 			max			= recClassesVect[i];
 			finalPoint	= i;
 		}
@@ -421,8 +476,7 @@ void showPicture(Mat picture,char *name){
 	imshow(name,picture);
 }
 void Fern::train(Mat *picture,int number){
-
-	rotate(picture,number);
+		rotate(picture,number);
 }
 vector <KeyPoint> rotateKeyPoints1(vector<KeyPoint> keypoints,int angle,Point center){
 	//RotatedRect myRect;

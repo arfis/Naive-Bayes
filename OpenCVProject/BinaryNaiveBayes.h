@@ -16,7 +16,7 @@ class BinaryNaiveBayes
 {
 public:
 	BinaryNaiveBayes(void);
-	vector<vector<int>> findMatch(Mat* picture,int *recognizedPoint);
+	vector<vector<float>> findMatch(Mat picture,int *recognizedPoint);
 	void trainBayes(Mat *picture,int number);
 	~BinaryNaiveBayes(void);
 	void init(int size);

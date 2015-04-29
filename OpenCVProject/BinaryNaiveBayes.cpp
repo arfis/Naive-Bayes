@@ -12,11 +12,12 @@
 
 using namespace cv;
 #define PI 3.14159265
-int BDES_MODE = 3;
+int BDES_MODE = 4;
 void brotate(Mat *picture,int picture_number);
 void baddToTrainingSet(Mat descriptors,int number);
 vector <KeyPoint> brotateKeyPoints1(vector<KeyPoint> keypoints,int angle,Point center);
 vector<vector<std::bitset<256> >> trainedBag;
+vector<int> original_descriptor_size;
 vector<KeyPoint> *bgetKeypoints(Mat picture);
 Mat *bgetDescriptors(Mat picture,vector<KeyPoint> *keyPoints);
 float computeValue(std::bitset<256> bites,std::bitset<256> secondBites,int sum_descriptors,int des_class_number);
@@ -26,8 +27,10 @@ int bayes_numberOfClasses;
 void BinaryNaiveBayes::init(int size)
 {
 	bayes_numberOfClasses = size;
-	for(int i =0;i<size;i++)
+	for(int i =0;i<size;i++){
 		trainedBag.push_back(vector<std::bitset<256>>());
+		original_descriptor_size.push_back(0);
+	}
 }
 
 BinaryNaiveBayes::BinaryNaiveBayes(void)
@@ -42,22 +45,23 @@ BinaryNaiveBayes::~BinaryNaiveBayes(void)
 void BinaryNaiveBayes::trainBayes(Mat *picture,int number){
 	
 		brotate(picture,number);
-	
+		
 }
-vector<vector<int>> BinaryNaiveBayes::findMatch(Mat *picture,int* recognized_class){
+vector<vector<float>> BinaryNaiveBayes::findMatch(Mat picture,int* recognized_class){
 	
 	float value;
 	int rec_class;
 	int rec_des;
 	vector<int> all_classes(bayes_numberOfClasses,0);
 
-	imshow("obrazok",*picture);
+	imshow("obrazok",picture);
+	waitKey(0);
 
-	vector<KeyPoint> *keyP = bgetKeypoints(*picture);
-	Mat *image_descriptors = bgetDescriptors(*picture,keyP);
-	
+	vector<KeyPoint> *keyP = bgetKeypoints(picture);
+	Mat *image_descriptors = bgetDescriptors(picture,keyP);
+
 	image_descriptors->convertTo(*image_descriptors, CV_32FC1);
-	vector<vector<int>> resultVect(image_descriptors->rows, vector<int>(2));
+	vector<vector<float>> resultVect(image_descriptors->rows, vector<float>(3));
 	
 
 		for(int descriptor_row = 0;descriptor_row<image_descriptors->rows;descriptor_row++){
@@ -85,7 +89,8 @@ vector<vector<int>> BinaryNaiveBayes::findMatch(Mat *picture,int* recognized_cla
 				}
 			}
 			resultVect[descriptor_row][0] = rec_class;
-			resultVect[descriptor_row][1] = rec_des%(trainedBag[rec_class].size());
+			resultVect[descriptor_row][1] = rec_des%(original_descriptor_size[rec_class]);
+			resultVect[descriptor_row][2] = value;
 			all_classes[rec_class]++;
 
 		}
@@ -140,6 +145,10 @@ void brotate(Mat *picture,int number){
 	Mat rot_mat = getRotationMatrix2D( center, angle, scale );
 	bprocessedKeyPoints = bgetKeypoints(*picture);
 	Mat descriptors = *bgetDescriptors(*picture, bprocessedKeyPoints);
+
+	if(original_descriptor_size[number] == 0){
+		original_descriptor_size[number] = descriptors.rows;
+	}
 
 	baddToTrainingSet(descriptors,number);
 	//ShowKeyPoints1(*picture,processedKeyPoints);
