@@ -36,7 +36,7 @@ public:
 	~Fern(void);
 	String getName(void);
 	void showHistogram(void);
-	vector<vector<float>> recognize(Mat descriptors,int *point,int write);
+	vector<vector<float>> recognize(Mat descriptors,int *point,int write,float *probability);
 	void setTest(int i);
 	long binary_decimal(string num);
 	//vector<vector<int>> Fern(Mat data, Mat classes,int count);

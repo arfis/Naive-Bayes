@@ -13,22 +13,26 @@
 using namespace cv;
 #define PI 3.14159265
 int BDES_MODE = 4;
+int MIN_PROBABILITY = 80;
+int BROTATION_COUNT = 40;
 void brotate(Mat *picture,int picture_number);
 void baddToTrainingSet(Mat descriptors,int number);
 vector <KeyPoint> brotateKeyPoints1(vector<KeyPoint> keypoints,int angle,Point center);
-vector<vector<std::bitset<256> >> trainedBag;
+vector<vector<std::bitset<512> >> trainedBag;
 vector<int> original_descriptor_size;
 vector<KeyPoint> *bgetKeypoints(Mat picture);
 Mat *bgetDescriptors(Mat picture,vector<KeyPoint> *keyPoints);
-float computeValue(std::bitset<256> bites,std::bitset<256> secondBites,int sum_descriptors,int des_class_number);
+float computeValue(std::bitset<512> bites,std::bitset<512> secondBites);
+float computePosterior(int sum_desc,int desc_in_class);
 vector<KeyPoint> *bprocessedKeyPoints;
 int sum_descriptors = 0;
 int bayes_numberOfClasses;
+
 void BinaryNaiveBayes::init(int size)
 {
 	bayes_numberOfClasses = size;
 	for(int i =0;i<size;i++){
-		trainedBag.push_back(vector<std::bitset<256>>());
+		trainedBag.push_back(vector<std::bitset<512>>());
 		original_descriptor_size.push_back(0);
 	}
 }
@@ -47,16 +51,14 @@ void BinaryNaiveBayes::trainBayes(Mat *picture,int number){
 		brotate(picture,number);
 		
 }
-vector<vector<float>> BinaryNaiveBayes::findMatch(Mat picture,int* recognized_class){
+vector<vector<float>> BinaryNaiveBayes::findMatch(Mat picture,int* recognized_class,float* probability){
 	
 	float value;
 	int rec_class;
 	int rec_des;
 	vector<int> all_classes(bayes_numberOfClasses,0);
-
-	imshow("obrazok",picture);
-	waitKey(0);
-
+	vector<vector<float>> sameValues;
+	
 	vector<KeyPoint> *keyP = bgetKeypoints(picture);
 	Mat *image_descriptors = bgetDescriptors(picture,keyP);
 
@@ -73,42 +75,112 @@ vector<vector<float>> BinaryNaiveBayes::findMatch(Mat picture,int* recognized_cl
 				des += bs.to_string();
 			}
 			//zoberieme bitset aktualneho deskriptora
-			std::bitset<256> bites(des);
+			std::bitset<512> bites(des);
 			float max = 0.0;
+			int same_index = 0;
 
 			for(int class_number=0;class_number<trainedBag.size();class_number++){
 				for(int descriptor_number=0;descriptor_number<trainedBag[class_number].size();descriptor_number++){
 					//porovname tento bitset s kazdym deskriptorom
-					value = computeValue(trainedBag[class_number][descriptor_number],bites,sum_descriptors,trainedBag[class_number].size());
-					
+					value = computeValue(trainedBag[class_number][descriptor_number],bites);
+					//value = 1-value;
+					value = value * 100;
+				
 					if(value>max){
+						same_index = 0;
+						sameValues.clear();
 						max			= value;
+						//std::cout << "trieda: " << class_number << value << std::endl;
+						sameValues.push_back(vector<float>(3));
+						sameValues[same_index][0] = class_number;
+						sameValues[same_index][1] = descriptor_number;
+						sameValues[same_index][2]= value;
 						rec_class	= class_number;
 						rec_des		= descriptor_number;
 					}
+
+					//pridavanie do zoznamu pointov ktore maju rovnaku vzdialenost
+					else if(value == max){
+						same_index++;
+						sameValues.push_back(vector<float>(3));
+						sameValues[same_index][0] = class_number;
+						sameValues[same_index][1] = descriptor_number;
+						sameValues[same_index][2]= value;	
+					}
 				}
 			}
-			resultVect[descriptor_row][0] = rec_class;
-			resultVect[descriptor_row][1] = rec_des%(original_descriptor_size[rec_class]);
-			resultVect[descriptor_row][2] = value;
-			all_classes[rec_class]++;
+
+			if(sameValues.size()>1){
+				int maxValue = 0;
+				int posterior;
+				for(int i=0;i<sameValues.size();i++){
+					posterior = computePosterior(sum_descriptors,trainedBag[sameValues[i][0]].size());
+					if(maxValue < posterior){
+						maxValue = posterior;
+						rec_class = sameValues[i][0];
+						rec_des = sameValues[i][1];
+						max = sameValues[i][2];
+					}
+				}
+			}
+
+			if(max > MIN_PROBABILITY){
+				all_classes[rec_class]++;
+				resultVect[descriptor_row][0] = rec_class;
+				resultVect[descriptor_row][1] = rec_des%(original_descriptor_size[rec_class]);
+				resultVect[descriptor_row][2] = max;
+			}
+
+			else{
+			resultVect[descriptor_row][0] = -1;
+			resultVect[descriptor_row][1] = -1;
+			resultVect[descriptor_row][2] = -1;
+			
+			}
 
 		}
 
-			int max = 0;
-			for(int i =0;i<all_classes.size();i++){
-				if(max < all_classes[i]){
-					max					= all_classes[i];
-					*recognized_class	= i;
+			float max = 0;
+			*recognized_class = -1;
+			int number_of_rec = 0;
+
+			for(int i=0;i<all_classes.size();i++){
+				number_of_rec += all_classes[i];
+			}
+			vector<float> helpVector(bayes_numberOfClasses,0);
+
+			for(int j =0;j<resultVect.size();j++){
+				if(resultVect[j][0] != -1)
+				helpVector[resultVect[j][0]] += resultVect[j][2];
+			}
+
+			for(int j =0;j<all_classes.size();j++){
+				if(helpVector[j] != -1){
+					helpVector[j] = helpVector[j]/all_classes[j];
 				}
 			}
+
+			for(int i =0;i<helpVector.size();i++){
+				if(max < helpVector[i] && all_classes[i] > 4){
+					max					= helpVector[i];
+					*recognized_class	= i;
+					*probability = max;
+				}
+			}
+
 		return resultVect;
 }
 
-float computeValue(std::bitset<256> bitsetFromBag,std::bitset<256> unknownBitset,int sum_desc,int desc_in_class){
+float computeValue(std::bitset<512> bitsetFromBag,std::bitset<512> unknownBitset){
 	float distance = (bitsetFromBag^unknownBitset).count();
+	//return (float)((float)1/(float)distance)*(float)posterior;
+	//float result = (float)((float)((1-((float)distance/(float)512)) * (1-(float)posterior)));
+	return (1-((float)distance/(float)512));
+	// result;
+}
+float computePosterior(int sum_desc,int desc_in_class){
 	float posterior = (float)(sum_desc-desc_in_class)/(float)sum_desc;
-	return (float)((float)1/(float)distance)*(float)posterior;
+	return posterior;
 }
 
 void baddToTrainingSet(Mat descriptors,int image_number){
@@ -122,7 +194,7 @@ void baddToTrainingSet(Mat descriptors,int image_number){
 			des += bs.to_string();
 		}
 		sum_descriptors += 1;
-		std::bitset<256> bites(des);
+		std::bitset<512> bites(des);
 		trainedBag[image_number].push_back(bites);
 	}
 
@@ -153,7 +225,7 @@ void brotate(Mat *picture,int number){
 	baddToTrainingSet(descriptors,number);
 	//ShowKeyPoints1(*picture,processedKeyPoints);
 	
-	for(int i=0;i<40;i++){
+	for(int i=0;i<ROTATION_COUNT;i++){
 		angle = rand() % 360;
 		rot_mat = getRotationMatrix2D( center, angle, scale );
 		warpAffine( *picture, new_picture, rot_mat, picture->size());

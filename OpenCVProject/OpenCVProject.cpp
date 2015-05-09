@@ -1,4 +1,4 @@
-
+#include <algorithm>
 #include "stdafx.h"
 #include "opencv2/highgui/highgui.hpp"
 #include <opencv2/core/core.hpp>
@@ -63,7 +63,8 @@ vector <KeyPoint> rotateKeyPoints(vector<KeyPoint> keypoints,int angle,Point cen
 void showHomography(vector<vector<float>> points, ImageInformation image1, ImageInformation image2,int recClass);
 vector<KeyPoint> *getKeypointsOrig(Mat picture);
 Mat *getDescriptorsOrig(Mat picture,vector<KeyPoint> *keyPoints);
-
+int photoNumber = 1;
+int findMax(vector<int> intVector);
 //*************Global variables***********************
 ImageInformation *firstImage = NULL;
 int listCount = 0;
@@ -73,7 +74,8 @@ vector<int> *triedy;
 int KEY_POINT_MODE = 4;
 bool wasTrained;
 int maxTried = 0;
-
+ofstream fout("freak.txt");
+	
 int main( int argc, const char** argv )
 {
 
@@ -88,6 +90,8 @@ ImageInformation *akt;
 Mat *binaryPatern = new Mat;
 Mat *trainingData = new Mat;
 Mat *testData = new Mat;
+int originalRows,originalCols;
+Mat scaled;
 
 char* pathPrefix = "C:\\Pictures\\Nezname\\";
 //****Koniec nacitavania obrazkov********
@@ -115,20 +119,22 @@ char* pathPrefix = "C:\\Pictures\\Nezname\\";
 	aktual = firstImage;
 	
 	int *RecognizedClass = new int;
+	float *Probability = new float;
+
 	vector<vector<float>> points;
 
 	int const naive = 1;
 	int const FileLoader = 0;
 	
-	
 	Fern *fernStructure = new Fern(listCount);
 	BinaryNaiveBayes *bNaiveBayes = new BinaryNaiveBayes();
 	bNaiveBayes->init(listCount);
-	
+	vector<int> recognized(listCount,0);
+
 	if(FileLoader == 1){
-		cout << "loading from file"<<endl;
+		fout << "loading from file"<<endl;
 		fernStructure->loadFromFile();
-		cout << "loading from file"<<endl;
+		fout << "loading from file"<<endl;
 	}
 	//Spustenie trenovania semi-naive bayes
 		start = clock();
@@ -139,81 +145,152 @@ char* pathPrefix = "C:\\Pictures\\Nezname\\";
 		}
 		endTime = clock();
 		cpu_time_used = ((double) (endTime - start)) / CLOCKS_PER_SEC;
-		cout << "trenovanie semi-naivneho bayesa trvalo: ";
-		cout << cpu_time_used <<endl;
+		fout << "trenovanie semi-naivneho bayesa trvalo: ";
+		fout << cpu_time_used <<endl;
 
-		cout << "trenovanie pomocou naivneho bayes";
+		fout << "trenovanie pomocou naivneho bayes";
 		//spustenie trenovanie naive bayes
 		aktual = firstImage;
 		start = clock();
 		for(int i=0;i<listCount;i++){
-			bNaiveBayes->trainBayes(aktual->picture,i);
+			//bNaiveBayes->trainBayes(aktual->picture,i);
 			aktual->cislo = i;
 			aktual = aktual->next;
 		}
 		endTime = clock();
 		cpu_time_used = ((double) (endTime - start)) / CLOCKS_PER_SEC;
-		cout << "trenovanie naivneho bayesa trvalo: ";
-		cout << cpu_time_used <<endl;
+		fout << "trenovanie naivneho bayesa trvalo: ";
+		fout << cpu_time_used <<endl;
 		ImageInformation *unknown;
 		while(nezname.size()>0){
 	
 	unknown = getPicture(nezname.back());
 	nezname.pop_back();
+	fout << "_________________________" << endl << endl;
+	fout << "rozpoznava sa: " << unknown->name << endl;
+	fout << "pocet keypointov v neznamom obrazku je: ";
+	fout << unknown->keypoints->size() << endl;
+	fout << "velkost neznameho obrazka je: ";
+	fout << unknown->picture->rows << "x" << unknown->picture->cols;
 	//rozpoznanie pomocou semi-naive bayes
 	start = clock();
-	points = fernStructure->recognize(*unknown->picture,RecognizedClass,FileLoader);
+
+	float maxProb = 0;
+	int aktRec;
+
+	//for(int i =5;i>1;i--){
+		//originalRows = unknown->picture->rows;
+		//originalCols = unknown->picture->cols;
+		//Size size(originalRows/i,originalCols/i);
+		//resize(*unknown->picture,scaled,size,0,0,INTER_CUBIC);
+		//*RecognizedClass = -1;
+		points = fernStructure->recognize(*unknown->picture,RecognizedClass,FileLoader,Probability);
+		
+	if(*RecognizedClass != -1){
+		if(*Probability > maxProb){
+			maxProb = *Probability;
+			aktRec = *RecognizedClass;
+			fout << endl << "pravdepodobnost: " << *Probability << " ze ide o obrazok " << *RecognizedClass << endl;
+		}
+	//}
+	}
+	*RecognizedClass = aktRec;//findMax(recognized);
 	endTime = clock();
 	cpu_time_used = ((double) (endTime - start)) / CLOCKS_PER_SEC;
-	cout << "rozpoznavanie pomocou semi-naivneho bayesa trvalo: ";
-	cout << cpu_time_used <<endl;
+	fout << "rozpoznavanie pomocou semi-naivneho bayesa trvalo: ";
+	fout << cpu_time_used <<endl;
 
 	int akt_p = 0;
 	akt = firstImage;
-	while(akt->cislo != *RecognizedClass){
-		akt = akt->next;
-	}
-
+	
+	if(*RecognizedClass != -1){
+		while(akt->cislo != *RecognizedClass){
+			akt = akt->next;
+		}
+	fout << "rozpoznany obrazok bol: " << *RecognizedClass << endl;
 	showHomography(points,*unknown,*akt,*RecognizedClass);
 	waitKey(0);
+	}
+	else 
+		fout << "objekt nebol rozpoznany";
 
-		
 	//rozpoznanie pomocou naive-bayes
-	cout << "rozpoznavanie pomocou naivneho bayes";
+	fout << "rozpoznavanie pomocou naivneho bayes";
 	start = clock();
-	points = bNaiveBayes->findMatch(*unknown->picture,RecognizedClass);
+	for(int i=0;i<recognized.size();i++){
+		recognized[i] = 0;
+	}
+
+	//for(int i =5;i>1;i--){
+	
+		//originalRows = unknown->picture->rows;
+		//originalCols = unknown->picture->cols;
+	
+		//Size size(originalRows/i,originalCols/i);
+		//resize(*unknown->picture,scaled,size,0,0,INTER_CUBIC);
+	*RecognizedClass=-1;
+	
+		//points = bNaiveBayes->findMatch(*unknown->picture,RecognizedClass,Probability);
+		if(*RecognizedClass!=-1){
+			if(*Probability > maxProb){
+				fout << endl << "pravdepodobnost: " << *Probability << " ze ide o obrazok " << *RecognizedClass << endl;
+				maxProb = *Probability;
+				aktRec = *RecognizedClass;
+			}
+		}
+	//}
+
+	//*RecognizedClass = findMax(recognized);
+	*RecognizedClass = aktRec;
 	endTime = clock();
 	cpu_time_used = ((double) (endTime - start)) / CLOCKS_PER_SEC;
-	cout << "rozpoznavanie pomocou naivneho bayesa trvalo: ";
-	cout << cpu_time_used <<endl;
-
-
+	fout << "rozpoznavanie pomocou naivneho bayesa trvalo: ";
+	fout << cpu_time_used <<endl;
+	
+	if(*RecognizedClass != -1){
 	akt_p = 0;
 	akt = firstImage;
 	while(akt->cislo != *RecognizedClass){
 		akt = akt->next;
 	}
-
-	showHomography(points,*unknown,*akt,*RecognizedClass);
+		showHomography(points,*unknown,*akt,*RecognizedClass);
+		waitKey(0);
+	
+	fout << "rozpoznany obrazok bol: " << *RecognizedClass << endl;
+	}
+	else
+		fout << "objekt nebol rozpoznany" << endl;
 	waitKey(0);
+	
 		}
-	cout<<"koniec";
-
+		
+	fout<<"koniec";
+	fout.close();
 	
 return 0; 
 }
-
+int findMax(vector<int> intVector){
+	int max = 0;
+	for(int i=0;i<intVector.size();i++){
+		if(intVector[i]>max){
+			max = intVector[i];
+		}
+	}
+	return max;
+}
+void writeToFile(char* what){
+	fout << what << endl;
+}
 void showHomography(vector<vector<float>> points, ImageInformation unknown, ImageInformation recognized,int recClass){
 	vector<Point2f> object, scene;
 	  
  std::vector< DMatch > good_matches;
  Mat descriptor_object;
  Mat descriptor_scene;
+//BFMatcher matcher(NORM_L2);
 
-
- //BFMatcher matcher(NORM_L2);
-vector<DMatch> matches;
-
+ vector<DMatch> matches;
+ 
 for(int i=0;i<points.size();i++){
 	if(points[i][0] == recClass)
 	{
@@ -221,68 +298,80 @@ for(int i=0;i<points.size();i++){
 		matches.push_back(match_point);
 	}
 }
+recognized.descriptors->convertTo(*recognized.descriptors, CV_32F);
+unknown.descriptors->convertTo(*unknown.descriptors, CV_32F);
+Mat img_object = *recognized.picture;
+Mat img_scene = *unknown.picture;
 
-//todo matches nadstavit
-  try{
-  //matcher.match( *recognized.descriptors,*unknown.descriptors, matches );
-  }catch (Exception &e){
-  cout << "chyba";
-  }
+ //FlannBasedMatcher matcher;
+  //std::vector< DMatch > matches;
+  //matcher.match(*recognized.descriptors, *unknown.descriptors, matches );
 
-   double max_dist = 0; double min_dist = 10000;
+
+   double max_dist = 0; double min_dist = 100;
 
   //-- Quick calculation of max and min distances between keypoints
-   /*
-  for( int i = 0; i < recognized.descriptors->rows; i++ )
+   
+  for( int i = 0; i < matches.size(); i++ )
   { double dist = matches[i].distance;
     if( dist < min_dist ) min_dist = dist;
     if( dist > max_dist ) max_dist = dist;
   }
   
-  for( int i = 0; i < recognized.descriptors->rows; i++ )
-  { if( matches[i].distance < 3000*min_dist )
+  int difference = max_dist-min_dist;
+
+  for( int i = 0; i < matches.size(); i++ )
+  { if( matches[i].distance < 4*min_dist ) //opacne znamienko
      { 
 		 good_matches.push_back( matches[i]); }
   }
-  */
+  vector<KeyPoint> keypoints_object = *recognized.keypoints;
+  vector<KeyPoint> keypoint_scene = *unknown.keypoints;
+
   Mat img_matches;
   drawMatches( *recognized.picture, *recognized.keypoints,*unknown.picture, *unknown.keypoints, 
-				matches, img_matches, Scalar::all(-1), Scalar::all(-1),
+				good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
                vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
 
-  for(int i =0;i<matches.size();i++){
-		scene.push_back(unknown.keypoints->at(matches.at(i).trainIdx).pt);
-		object.push_back(recognized.keypoints->at(matches.at(i).queryIdx).pt);
+
+  for(int i =0;i<good_matches.size();i++){
+		object.push_back( keypoints_object[ good_matches[i].queryIdx ].pt );
+		scene.push_back( keypoint_scene[ good_matches[i].trainIdx ].pt );
  }
  
 Mat H = findHomography( object, scene, CV_RANSAC );
-Mat warpImage2;
+
+vector<Point2f> unknown_corners;
+vector<Point2f> recognized_corners;
 
 
-std::vector<Point2f> unknown_corners;
-std::vector<Point2f> recognized_corners;
-Mat img_object = *unknown.picture;
- //-- Get the corners from the image_1 ( the object to be "detected" )
+  //-- Get the corners from the image_1 ( the object to be "detected" )
   std::vector<Point2f> obj_corners(4);
   obj_corners[0] = cvPoint(0,0); obj_corners[1] = cvPoint( img_object.cols, 0 );
   obj_corners[2] = cvPoint( img_object.cols, img_object.rows ); obj_corners[3] = cvPoint( 0, img_object.rows );
   std::vector<Point2f> scene_corners(4);
 
-  perspectiveTransform( obj_corners,scene_corners, H);
-  //imshow( "Good Matches & Object detection", warpImage2 );
+ perspectiveTransform( obj_corners, scene_corners, H);
 
-
-  //line( img_matches, scene_corners[0] + Point2f( img_object.cols, 0), scene_corners[1] + Point2f( img_object.cols, 0), Scalar(0, 255, 0), 4 );
-  //line( img_matches, scene_corners[1] + Point2f( img_object.cols, 0), scene_corners[2] + Point2f( img_object.cols, 0), Scalar( 0, 255, 0), 4 );
-  //line( img_matches, scene_corners[2] + Point2f( img_object.cols, 0), scene_corners[3] + Point2f( img_object.cols, 0), Scalar( 0, 255, 0), 4 );
-  //line( img_matches, scene_corners[3] + Point2f( img_object.cols, 0), scene_corners[0] + Point2f( img_object.cols, 0), Scalar( 0, 255, 0), 4 );
-
+  //-- Draw lines between the corners (the mapped object in the scene - image_2 )
+  line( img_matches, scene_corners[0] + Point2f( img_object.cols, 0), scene_corners[1] + Point2f( img_object.cols, 0), Scalar(0, 255, 0), 4 );
+  line( img_matches, scene_corners[1] + Point2f( img_object.cols, 0), scene_corners[2] + Point2f( img_object.cols, 0), Scalar( 0, 255, 0), 4 );
+  line( img_matches, scene_corners[2] + Point2f( img_object.cols, 0), scene_corners[3] + Point2f( img_object.cols, 0), Scalar( 0, 255, 0), 4 );
+  line( img_matches, scene_corners[3] + Point2f( img_object.cols, 0), scene_corners[0] + Point2f( img_object.cols, 0), Scalar( 0, 255, 0), 4 );
 
   //-- Show detected matches
   resize(img_matches,img_matches,Size(1920*2/3,1080*2/3));
   imshow( "Good Matches", img_matches);
+  //TODO:zmenit cestu do suboru niekam
 
+  //string path = "D:\\DPfotky\\finished";
+  //path += photoNumber;
+  //path += ".jpg";
+  //path += ".jpg";
+  //imwrite(path, img_matches);
+  //photoNumber++;
   waitKey(0);
+  //Sleep(6000);
 }
 
 vector<KeyPoint> *getKeypointsOrig(Mat picture){
@@ -325,7 +414,6 @@ Mat *getDescriptorsOrig(Mat picture,vector<KeyPoint> *keyPoints){
 		descriptorExtractor->compute(picture, *keyPoints, *descriptors);
 		return descriptors;
 }
-
 void rotate(ImageInformation *image,Fern *fern){
 	Mat *picture = image->picture;
 	vector<KeyPoint> *keypoints = image->keypoints;
@@ -372,8 +460,6 @@ int getDiagonal(Mat* picture){
 	newSize = sqrt(pow(a,2)+pow(b,2));
 	return newSize;
 }
-
-
 vector <KeyPoint> rotateKeyPoints(vector<KeyPoint> keypoints,int angle,Point center,Mat M){
 	//RotatedRect myRect;
 	std::vector<cv::Point2f> points;
@@ -465,7 +551,6 @@ Mat* loadTrainingSet(){
 
 		return data;
 }
-
 ImageInformation *getPicture(char* pathFile){
 
 	ImageInformation *akt;
@@ -488,8 +573,6 @@ ImageInformation *getPicture(char* pathFile){
 
 	return akt;
 }
-
-
 Mat createBinary(Mat picture)
 {
 	 //Grayscale matrix
@@ -509,7 +592,6 @@ Mat createBinary(Mat picture)
 
 	return binaryMat;
 }
-
 vector<char*> listFile(char* Path,bool trainingSet){
         DIR *pDIR;
 		vector<char*> data;

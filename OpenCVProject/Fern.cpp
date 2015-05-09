@@ -24,9 +24,9 @@ using namespace std;
 #define PI 3.14159265
 char* TRAIN_FILE = "training_semiNaive.txt";
 char* RANDOM_FILE = "random_numbers.txt";
-int const ROTATION_COUNT = 30;
+int const ROTATION_COUNT = 0;
 int const FERN_COUNT = 40;
-int FERN_SIZE = 8;
+int FERN_SIZE = 10;
 int DES_MODE = 4;
 int no;
 //int Ksize;
@@ -121,7 +121,7 @@ void Fern::loadUnknown(Mat data){
 
 			float number = data.at<float>(i,j);
 			
-			std::bitset<8> bs (number);
+			std::bitset<9> bs (number);
 			des = bs.to_string();
 
 			for(int binaryIndex=0;binaryIndex<FERN_SIZE;binaryIndex++){
@@ -192,13 +192,20 @@ void rotate(Mat *picture,int number){
 	Mat rot_mat = getRotationMatrix2D( center, angle, scale );
 	processedKeyPoints = getKeypoints(*picture);
 	Mat descriptors = *getDescriptors(*picture, processedKeyPoints);
+	int scaleWidth, scaleHeight;
 
 	addToTrainingSet(descriptors,number);
 	//ShowKeyPoints1(*picture,processedKeyPoints);
 	
 	for(int i=0;i<ROTATION_COUNT;i++){
 		angle = rand() % 360;
+
+		scaleWidth = rand() % picture->cols;
+		scaleHeight = rand() % picture->rows;
+		Size size(scaleWidth,scaleHeight);
+
 		rot_mat = getRotationMatrix2D( center, angle, scale );
+
 		warpAffine( *picture, new_picture, rot_mat, picture->size());
 	
 		*newKeypoints = rotateKeyPoints1(*processedKeyPoints,angle,center);
@@ -343,7 +350,7 @@ void addToTrainingSet(Mat descriptors,int classNumber){
 		for(int j=0;j<descriptors.cols;j++){
 
 			float number = descriptors.at<float>(point,j);
-			std::bitset<8> bs (number);
+			std::bitset<9> bs (number);
 			des += bs.to_string();
 	  }
 		//pouzitie 40tich nahodnych fernov pri budovani histogramu - 
@@ -362,7 +369,7 @@ void ShowKeyPoints1(Mat picture,vector<KeyPoint> *keypointsA){
 	cv::drawKeypoints(picture, *keypointsA, outpt, Scalar::all(10), DrawMatchesFlags::DEFAULT);
 	showPicture(outpt,"keypointy");
 }
-vector<vector<float>> Fern::recognize(Mat picture,int *rec_point,int write){
+vector<vector<float>> Fern::recognize(Mat picture,int *rec_point,int write,float* probability){
 	
 	if(write == 1)
 		writeToFile(1);
@@ -387,10 +394,11 @@ vector<vector<float>> Fern::recognize(Mat picture,int *rec_point,int write){
 	int fernIndex;
 	int recClass	=-1;
 	int recDes		=-1;
-	int max			= 0;
+	float max		= 0;
 	int sumForDes	= 0;
 	int position;
-
+	vector<float> helpVector(classes,0);
+	vector<int> fern_positions;
 	printf("zacina rozpoznavanie");
 	//prechadzanie kazdeho keypointu - deskriptoru z rozpoznavaneho objektu
 	for(int point =0;point<descriptors.rows;point++){
@@ -406,7 +414,7 @@ vector<vector<float>> Fern::recognize(Mat picture,int *rec_point,int write){
 		for(int j=0;j<descriptors.cols;j++){
 
 			float number = descriptors.at<float>(point,j);
-			std::bitset<8> bs (number);
+			std::bitset<9> bs (number);
 			des += bs.to_string();
 		}
 		//*********************Koniec tvorby binarneho retazca**************************//
@@ -421,7 +429,6 @@ vector<vector<float>> Fern::recognize(Mat picture,int *rec_point,int write){
 
 				//pre kazdy keypoint(deskriptor) sa vynuluje hodnota sumy
 				sumForDes = 0;
-
 				//vyber fernov zo vstupneho retazca neznameho obrazka
 				for(fernIndex=0;fernIndex<40;fernIndex++){
 							
@@ -433,41 +440,53 @@ vector<vector<float>> Fern::recognize(Mat picture,int *rec_point,int write){
 				}
 
 				if(sumForDes>max ){
-					float fitness = (float)sumForDes/float(40*ROTATION_COUNT);
-					if(fitness > 0.010){
+					float fitness = ((float)sumForDes/float(40*ROTATION_COUNT))*100;
+
+					//if(fitness > 15){
 						max			= sumForDes;
 						recClass	= i;
 						recDes		= j;
 						resultVect[point][0] = recClass;
 						resultVect[point][1] = recDes;
-						resultVect[point][2] = fitness;
-					}
+						resultVect[point][2] = sumForDes;
+					
+				/*}
 					else{
-						recClass	= classes+1;
+						recClass	= -1;
 						recDes		= 0;
-						resultVect[point][0] = classes+1;
+						resultVect[point][0] = -1;
 						resultVect[point][1] = 0;
 					}
+					*/
 					}
 			}
 
 		}
 		//*********************Koniec rozpoznavania neznameho keypointu**********************//
 		//po konci cyklusu sa najde keypoint na ktory sa neznamy keypoint namapuje
+		
 		mapper[point]	= recClass;
-		recClassesVect[recClass]++;
+		if(recClass != -1){
+			recClassesVect[recClass]++;
+			helpVector[recClass] += resultVect[point][2];
+		}
 	}
 
-	max = 0;
+	for(int i =0;i<recClassesVect.size()-1;i++){
+		helpVector[i] /= recClassesVect[i];
+	}
+
+	float maxF = 0;
 	int finalPoint = 0;
 	for(int i=0;i<recClassesVect.size();i++){
 
-		if(recClassesVect[i]>=max && recClassesVect[i]!=999){
-			max			= recClassesVect[i];
-			finalPoint	= i;
+		if(recClassesVect[i]>maxF){
+			maxF			= recClassesVect[i];
+			finalPoint		= i;
 		}
 	}
 	*rec_point = finalPoint;
+	*probability = maxF;
 	return resultVect;
 }
 
@@ -475,9 +494,11 @@ void showPicture(Mat picture,char *name){
 	namedWindow(name);
 	imshow(name,picture);
 }
+
 void Fern::train(Mat *picture,int number){
 		rotate(picture,number);
 }
+
 vector <KeyPoint> rotateKeyPoints1(vector<KeyPoint> keypoints,int angle,Point center){
 	//RotatedRect myRect;
 	std::vector<cv::Point2f> points;
