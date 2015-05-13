@@ -24,10 +24,10 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Classificator.h">
+    <ClInclude Include="NaiveBayes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Fern.h">
+    <ClInclude Include="SemiNaiveBayes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -35,13 +35,13 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="OpenCVProject.cpp">
+    <ClCompile Include="NaiveBayes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Classificator.cpp">
+    <ClCompile Include="SemiNaiveBayes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Fern.cpp">
+    <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

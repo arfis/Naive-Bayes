@@ -1,28 +1,48 @@
-﻿Build started 3/29/2015 3:52:16 PM.
-     1>Project "C:\Users\Snow\documents\visual studio 2012\Projects\OpenCVProject\OpenCVProject\OpenCVProject.vcxproj" on node 2 (Build target(s)).
+﻿Build started 5/13/2015 11:25:56 PM.
+     1>Project "D:\Skola\DP\Naive-Bayes\OpenCVProject\OpenCVProject.vcxproj" on node 2 (Build target(s)).
      1>ClCompile:
-         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\CL.exe /c /IC:\OpenCV\opencv\build\include /ZI /nologo /W3 /WX- /sdl /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _CRT_SECURE_NO_WARNINGS /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Yu"stdafx.h" /Fp"Debug\OpenCVProject.pch" /Fo"Debug\\" /Fd"Debug\vc110.pdb" /Gd /TP /analyze- /errorReport:prompt OpenCVProject.cpp
-         OpenCVProject.cpp
-     1>c:\users\snow\documents\visual studio 2012\projects\opencvproject\opencvproject\opencvproject.cpp(71): warning C4101: 'processedImage' : unreferenced local variable
-     1>c:\users\snow\documents\visual studio 2012\projects\opencvproject\opencvproject\opencvproject.cpp(133): warning C4101: 'keypoints' : unreferenced local variable
-     1>c:\users\snow\documents\visual studio 2012\projects\opencvproject\opencvproject\opencvproject.cpp(373): warning C4101: 'index' : unreferenced local variable
-     1>c:\users\snow\documents\visual studio 2012\projects\opencvproject\opencvproject\opencvproject.cpp(373): warning C4101: 'k' : unreferenced local variable
-     1>c:\users\snow\documents\visual studio 2012\projects\opencvproject\opencvproject\opencvproject.cpp(373): warning C4101: 'j' : unreferenced local variable
-     1>c:\users\snow\documents\visual studio 2012\projects\opencvproject\opencvproject\opencvproject.cpp(415): warning C4244: '=' : conversion from 'float' to 'int', possible loss of data
-     1>c:\users\snow\documents\visual studio 2012\projects\opencvproject\opencvproject\opencvproject.cpp(406): warning C4101: 'responseInt' : unreferenced local variable
-     1>c:\users\snow\documents\visual studio 2012\projects\opencvproject\opencvproject\opencvproject.cpp(409): warning C4101: 'index' : unreferenced local variable
-     1>c:\users\snow\documents\visual studio 2012\projects\opencvproject\opencvproject\opencvproject.cpp(409): warning C4101: 'k' : unreferenced local variable
-     1>c:\users\snow\documents\visual studio 2012\projects\opencvproject\opencvproject\opencvproject.cpp(409): warning C4101: 'j' : unreferenced local variable
-     1>c:\users\snow\documents\visual studio 2012\projects\opencvproject\opencvproject\opencvproject.cpp(421): warning C4101: 'ex' : unreferenced local variable
-     1>c:\users\snow\documents\visual studio 2012\projects\opencvproject\opencvproject\opencvproject.cpp(430): warning C4101: 'k' : unreferenced local variable
+         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\CL.exe /c /IC:\OpenCV\opencv\build\include /ZI /nologo /W3 /WX- /sdl /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _CRT_SECURE_NO_WARNINGS /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Yu"stdafx.h" /Fp"Debug\OpenCVProject.pch" /Fo"Debug\\" /Fd"Debug\vc110.pdb" /Gd /TP /analyze- /errorReport:prompt Main.cpp
+         Main.cpp
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(1): warning C4627: '#include <algorithm>': skipped when looking for precompiled header use
+                 Add directive to 'stdafx.h' or rebuild precompiled header
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(220): warning C4018: '<' : signed/unsigned mismatch
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(86): warning C4101: 'processedImage' : unreferenced local variable
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(274): warning C4018: '<' : signed/unsigned mismatch
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(294): warning C4018: '<' : signed/unsigned mismatch
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(297): warning C4244: 'argument' : conversion from 'float' to 'int', possible loss of data
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(315): warning C4018: '<' : signed/unsigned mismatch
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(321): warning C4244: 'initializing' : conversion from 'double' to 'int', possible loss of data
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(323): warning C4018: '<' : signed/unsigned mismatch
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(337): warning C4018: '<' : signed/unsigned mismatch
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(357): warning C4244: 'argument' : conversion from 'int' to 'float', possible loss of data
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(358): warning C4244: 'argument' : conversion from 'int' to 'float', possible loss of data
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(359): warning C4244: 'argument' : conversion from 'int' to 'float', possible loss of data
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(360): warning C4244: 'argument' : conversion from 'int' to 'float', possible loss of data
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(444): warning C4244: 'argument' : conversion from 'double' to 'int', possible loss of data
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(460): warning C4244: '=' : conversion from 'double' to 'int', possible loss of data
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(482): warning C4244: '=' : conversion from 'double' to 'float', possible loss of data
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(483): warning C4244: '=' : conversion from 'double' to 'float', possible loss of data
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(470): warning C4101: 'test' : unreferenced local variable
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(470): warning C4101: 'test2' : unreferenced local variable
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(512): warning C4101: 'keypoints' : unreferenced local variable
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(763): warning C4101: 'index' : unreferenced local variable
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(763): warning C4101: 'k' : unreferenced local variable
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(763): warning C4101: 'j' : unreferenced local variable
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(805): warning C4244: '=' : conversion from 'float' to 'int', possible loss of data
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(796): warning C4101: 'responseInt' : unreferenced local variable
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(799): warning C4101: 'index' : unreferenced local variable
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(799): warning C4101: 'k' : unreferenced local variable
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(799): warning C4101: 'j' : unreferenced local variable
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(811): warning C4101: 'ex' : unreferenced local variable
+     1>d:\skola\dp\naive-bayes\opencvproject\main.cpp(820): warning C4101: 'k' : unreferenced local variable
        Link:
-         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"C:\Users\Snow\documents\visual studio 2012\Projects\OpenCVProject\Debug\OpenCVProject.exe" /INCREMENTAL /NOLOGO /LIBPATH:C:\OpenCV\opencv\build\x86\vc11\lib opencv_core2410d.lib opencv_imgproc2410d.lib opencv_highgui2410d.lib opencv_ml2410d.lib opencv_video2410d.lib opencv_features2d2410d.lib opencv_calib3d2410d.lib opencv_objdetect2410d.lib opencv_contrib2410d.lib opencv_legacy2410d.lib opencv_flann2410d.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:\Users\Snow\documents\visual studio 2012\Projects\OpenCVProject\Debug\OpenCVProject.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\Users\Snow\documents\visual studio 2012\Projects\OpenCVProject\Debug\OpenCVProject.lib" /MACHINE:X86 Debug\Classificator.obj
-         Debug\Fern.obj
-         Debug\OpenCVProject.obj
+         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"D:\Skola\DP\Naive-Bayes\Debug\OpenCVProject.exe" /INCREMENTAL /NOLOGO /LIBPATH:C:\OpenCV\opencv\build\x86\vc11\lib opencv_core2410d.lib opencv_imgproc2410d.lib opencv_highgui2410d.lib opencv_ml2410d.lib opencv_video2410d.lib opencv_features2d2410d.lib opencv_calib3d2410d.lib opencv_objdetect2410d.lib opencv_contrib2410d.lib opencv_legacy2410d.lib opencv_flann2410d.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:\Skola\DP\Naive-Bayes\Debug\OpenCVProject.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\Skola\DP\Naive-Bayes\Debug\OpenCVProject.lib" /MACHINE:X86 Debug\NaiveBayes.obj
+         Debug\SemiNaiveBayes.obj
+         Debug\Main.obj
          Debug\stdafx.obj
-         OpenCVProject.vcxproj -> C:\Users\Snow\documents\visual studio 2012\Projects\OpenCVProject\Debug\OpenCVProject.exe
-     1>Done Building Project "C:\Users\Snow\documents\visual studio 2012\Projects\OpenCVProject\OpenCVProject\OpenCVProject.vcxproj" (Build target(s)).
+         OpenCVProject.vcxproj -> D:\Skola\DP\Naive-Bayes\Debug\OpenCVProject.exe
+     1>Done Building Project "D:\Skola\DP\Naive-Bayes\OpenCVProject\OpenCVProject.vcxproj" (Build target(s)).
 
 Build succeeded.
 
-Time Elapsed 00:00:06.37
+Time Elapsed 00:00:03.28
